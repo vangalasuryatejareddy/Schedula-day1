@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Schedula | Appointment operations starter",
-  description: "A production-minded starter for doctor appointment booking workflows.",
+  title: "Schedula | Doctor appointments",
+  description: "Find a doctor, choose an available time, and confirm your appointment.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
