@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Schedula | Doctor appointments",
-  description: "Find a doctor, choose an available time, and confirm your appointment.",
+  title: "Schedula | Patient & Doctor Appointment Platform",
+  description: "A connected patient and doctor portal for discovery, availability, booking, and appointment management.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
