@@ -136,6 +136,7 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-5 text-center text-[10px] leading-5 text-[var(--muted)]">By continuing, you’re entering the Schedula appointment demo.</p>
+          <p className="mt-3 text-center text-xs text-[var(--muted)]">Are you a doctor? <a href="/doctor/login" className="font-bold text-[var(--brand)] hover:underline">Open the Doctor Portal</a></p>
         </div>
       </section>
     </main>
