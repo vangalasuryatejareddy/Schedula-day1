@@ -45,7 +45,7 @@ export function DoctorsView() {
           <div className="relative z-10 max-w-2xl">
             <p className="text-sm font-semibold tracking-wide text-emerald-200">Find the right care</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Book a doctor in a few simple steps.</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-emerald-50/80 sm:text-base">Browse available specialists, choose a convenient time, and confirm your appointment without the back-and-forth.</p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-emerald-50/80 sm:text-base">Browse available specialists, choose a convenient time, and confirm your appointment without the back-and-forth.</p><div className="mt-5 flex flex-wrap items-center gap-3"><span className="text-xs font-semibold text-emerald-100/65">Are you a healthcare professional?</span><a href="/doctor" className="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-bold text-white hover:bg-white/10">Open Doctor Portal →</a></div>
           </div>
           <div aria-hidden="true" className="absolute -right-12 -top-16 size-56 rounded-full border-[28px] border-white/5 sm:size-72" />
           <div aria-hidden="true" className="absolute -bottom-24 right-20 size-48 rounded-full border-[24px] border-emerald-300/10" />

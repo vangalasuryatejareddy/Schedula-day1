@@ -17,3 +17,8 @@ export function saveBooking(booking: BookingRecord): void {
   const bookings = getBookings();
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify([booking, ...bookings]));
 }
+
+export function updateBookingStatus(id: string, status: "pending" | "confirmed"): void {
+  const bookings = getBookings().map((booking) => booking.id === id ? { ...booking, status } : booking);
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
+}

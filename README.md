@@ -249,3 +249,20 @@ Only merge a task PR after review. Interns share the PR URL or their repository 
 - Use real loading, empty, and error states for data-driven UI.
 - Design mobile-first; verify 320px, 768px, 1024px, and 1440px.
 - Keep motion purposeful, fast, and respectful of reduced-motion preferences.
+## Day 2 – Doctor Portal & Availability
+
+Additional routes implemented on top of the existing Day 1 user portal:
+
+- `/doctor/register` – full doctor registration with personal, professional, contact and account validation.
+- `/doctor/login` – doctor authentication and error handling.
+- `/doctor/dashboard` – upcoming appointments, Pending/Confirmed status and quick actions.
+- `/doctor/profile` – editable doctor profile plus one-time and recurring appointment availability management.
+- `/doctor/appointments` – complete doctor appointment list with status and search filtering.
+
+### User Portal Integration
+
+For this frontend internship prototype, doctor registrations and availability are persisted in browser `localStorage`. The User Portal merges registered doctors and their active slots with the existing typed mock API data. Therefore, in the same browser:
+
+`Doctor creates slot → slot appears in User Portal → user selects doctor/date/time → booking is saved → booking appears in Doctor Portal`
+
+Booked slots are excluded from the user booking selection, and doctors can confirm pending appointments from the appointments page.

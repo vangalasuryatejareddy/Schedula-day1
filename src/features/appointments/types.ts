@@ -6,4 +6,7 @@ export type BookingRecord = {
   date: string;
   time: string;
   createdAt: string;
+  patientName?: string;
+  reason?: string;
+  status?: "pending" | "confirmed";
 };
