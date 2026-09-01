@@ -27,6 +27,10 @@ export function BookingView() {
   const [booking, setBooking] = useState<BookingRecord | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [bookingError, setBookingError] = useState("");
+<<<<<<< HEAD
+  const [appointmentType, setAppointmentType] = useState<"In-person"|"Video consultation"|"Follow-up">("In-person");
+=======
+>>>>>>> origin/feat/day-1-doctor-booking-flow
 
   useEffect(() => {
     if (ready && !auth) router.replace("/login");
@@ -74,6 +78,14 @@ export function BookingView() {
       date: selectedDate,
       time: selectedTime,
       createdAt: new Date().toISOString(),
+<<<<<<< HEAD
+      patientName: auth?.email || "Schedula user",
+      patientId: auth?.email,
+      reason: "General consultation",
+      appointmentType,
+      status: "pending",
+=======
+>>>>>>> origin/feat/day-1-doctor-booking-flow
     };
 
     try {
@@ -125,7 +137,11 @@ export function BookingView() {
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">{doctor.availableDates.map((date) => <button key={date} type="button" onClick={() => handleDateChange(date)} aria-pressed={selectedDate === date} className={`rounded-xl border px-3 py-3 text-left ${selectedDate === date ? "border-[var(--brand)] bg-emerald-50 ring-2 ring-emerald-100" : "border-[var(--line)] hover:border-emerald-300"}`}><span className="block text-xs text-[var(--muted)]">{formatDate(date).split(" ")[0]}</span><span className="mt-1 block text-sm font-bold">{formatDate(date).replace(`${formatDate(date).split(" ")[0]} `, "")}</span></button>)}</div>
             </div>
 
+<<<<<<< HEAD
+            <div className="mt-8 border-t border-[var(--line)] pt-7"><div className="mb-4"><p className="text-sm font-bold">2. Appointment type</p><div className="mt-3 flex flex-wrap gap-2">{(["In-person","Video consultation","Follow-up"] as const).map(type=><button key={type} type="button" onClick={()=>setAppointmentType(type)} className={`rounded-xl border px-3 py-2 text-xs font-bold ${appointmentType===type?"border-[var(--brand)] bg-emerald-50 text-[var(--brand)]":"border-[var(--line)]"}`}>{type}</button>)}</div></div><div><p className="text-sm font-bold">3. Select a time</p><p className="mt-1 text-xs text-[var(--muted)]">Choose one available slot for your appointment.</p></div>
+=======
             <div className="mt-8 border-t border-[var(--line)] pt-7"><div><p className="text-sm font-bold">2. Select a time</p><p className="mt-1 text-xs text-[var(--muted)]">Choose one available slot for your appointment.</p></div>
+>>>>>>> origin/feat/day-1-doctor-booking-flow
               {openSlots.length === 0 ? <div className="mt-4 rounded-xl border border-dashed border-[var(--line)] bg-[var(--canvas)] p-5 text-sm text-[var(--muted)]">No slots remain for this date. Please choose another date.</div> : <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{openSlots.map((slot) => <button key={slot} type="button" onClick={() => { setSelectedTime(slot); setBookingError(""); }} aria-pressed={selectedTime === slot} className={`rounded-xl border px-3 py-3 text-sm font-semibold ${selectedTime === slot ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] hover:border-emerald-300 hover:bg-emerald-50"}`}>{slot}</button>)}</div>}
             </div>
 
@@ -133,9 +149,15 @@ export function BookingView() {
           </section>
 
           <aside className="h-fit rounded-3xl border border-[var(--line)] bg-white p-5 shadow-[0_12px_40px_rgba(27,41,37,0.05)] sm:p-6 lg:sticky lg:top-6" aria-label="Appointment summary">
+<<<<<<< HEAD
+            <p className="text-sm font-bold">4. Confirm appointment</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Review your selection before confirming.</p>
+            <div className="mt-5 space-y-4 rounded-2xl bg-[var(--canvas)] p-4"><div><p className="text-xs text-[var(--muted)]">Doctor</p><p className="mt-1 text-sm font-bold">{doctor.name}</p></div><div><p className="text-xs text-[var(--muted)]">Specialization</p><p className="mt-1 text-sm font-semibold">{doctor.specialty}</p></div><div><p className="text-xs text-[var(--muted)]">Date</p><p className="mt-1 text-sm font-semibold">{selectedDate ? formatLongDate(selectedDate) : "Not selected"}</p></div><div><p className="text-xs text-[var(--muted)]">Time</p><p className="mt-1 text-sm font-semibold">{selectedTime || "Not selected"}</p></div><div><p className="text-xs text-[var(--muted)]">Appointment type</p><p className="mt-1 text-sm font-semibold">{appointmentType}</p></div><div className="border-t border-[var(--line)] pt-4"><div className="flex items-center justify-between"><span className="text-sm text-[var(--muted)]">Consultation fee</span><span className="font-bold">₹{doctor.consultationFee}</span></div></div></div>
+=======
             <p className="text-sm font-bold">3. Confirm appointment</p>
             <p className="mt-1 text-xs text-[var(--muted)]">Review your selection before confirming.</p>
             <div className="mt-5 space-y-4 rounded-2xl bg-[var(--canvas)] p-4"><div><p className="text-xs text-[var(--muted)]">Doctor</p><p className="mt-1 text-sm font-bold">{doctor.name}</p></div><div><p className="text-xs text-[var(--muted)]">Specialization</p><p className="mt-1 text-sm font-semibold">{doctor.specialty}</p></div><div><p className="text-xs text-[var(--muted)]">Date</p><p className="mt-1 text-sm font-semibold">{selectedDate ? formatLongDate(selectedDate) : "Not selected"}</p></div><div><p className="text-xs text-[var(--muted)]">Time</p><p className="mt-1 text-sm font-semibold">{selectedTime || "Not selected"}</p></div><div className="border-t border-[var(--line)] pt-4"><div className="flex items-center justify-between"><span className="text-sm text-[var(--muted)]">Consultation fee</span><span className="font-bold">₹{doctor.consultationFee}</span></div></div></div>
+>>>>>>> origin/feat/day-1-doctor-booking-flow
             <button type="button" onClick={handleConfirm} disabled={!selectedDate || !selectedTime} className="mt-5 w-full rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white hover:bg-[var(--brand-deep)] disabled:cursor-not-allowed disabled:opacity-45">Confirm appointment</button>
             <p className="mt-3 text-center text-[11px] leading-5 text-[var(--muted)]">Demo mode: this booking is stored locally in your browser.</p>
           </aside>
