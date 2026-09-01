@@ -136,7 +136,10 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-5 text-center text-[10px] leading-5 text-[var(--muted)]">By continuing, you’re entering the Schedula appointment demo.</p>
+<<<<<<< HEAD
           <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 text-left"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-[var(--ink)]">Are you a doctor?</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Register, manage appointment availability, and view patient bookings from the Doctor Portal.</p></div><div className="flex shrink-0 gap-2"><a href="/doctor/register" className="rounded-lg bg-[var(--brand)] px-3 py-2 text-xs font-bold text-white">Register</a><a href="/doctor/login" className="rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs font-bold hover:border-[var(--brand)] hover:text-[var(--brand)]">Login</a></div></div></div>
+=======
+>>>>>>> origin/feat/day-1-doctor-booking-flow
         </div>
       </section>
     </main>

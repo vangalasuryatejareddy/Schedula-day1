@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { BookingRecord, BookingStatus } from "@/features/appointments/types";
 import { addNotification } from "@/features/notifications/storage";
 const STORAGE_KEY = "schedula-bookings";
@@ -9,3 +10,24 @@ export function updateBookingStatus(id: string, status: BookingStatus): void { c
 export function rescheduleBooking(id:string,date:string,time:string){const updated=updateBooking(id,{date,time,status:"confirmed"});if(updated){addNotification({audience:"user",title:"Appointment rescheduled",message:`New time: ${date} at ${time}`,appointmentId:id});addNotification({audience:"doctor",doctorId:updated.doctorId,title:"Appointment rescheduled",message:`${updated.patientName||"Patient"} moved to ${date} ${time}`,appointmentId:id});}return updated;}
 export function addPrescription(id:string,text:string){const updated=updateBooking(id,{prescription:text,status:"completed"});if(updated)addNotification({audience:"user",title:"Prescription available",message:`Your prescription from ${updated.doctorName} is ready.`,appointmentId:id});return updated;}
 export function addReview(id:string,rating:number,comment:string){return updateBooking(id,{review:{rating,comment,createdAt:new Date().toISOString()}});}
+=======
+import type { BookingRecord } from "@/features/appointments/types";
+
+const STORAGE_KEY = "schedula-bookings";
+
+export function getBookings(): BookingRecord[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored ? (JSON.parse(stored) as BookingRecord[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveBooking(booking: BookingRecord): void {
+  const bookings = getBookings();
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify([booking, ...bookings]));
+}
+>>>>>>> origin/feat/day-1-doctor-booking-flow

@@ -1,4 +1,5 @@
 import type { Doctor } from "@/types/doctor";
+<<<<<<< HEAD
 import { getAvailabilitySlots, getRegisteredDoctors } from "@/features/doctor-portal/storage";
 
 type DoctorsResponse = { data: Doctor[] };
@@ -33,4 +34,15 @@ export async function getDoctors(): Promise<Doctor[]> {
   if (typeof window === "undefined") return body.data;
   const registered = getRegisteredDoctors().map(profileToDoctor);
   return [...registered, ...body.data];
+=======
+
+type DoctorsResponse = { data: Doctor[] };
+
+export async function getDoctors(): Promise<Doctor[]> {
+  const response = await fetch("/api/doctors");
+  if (!response.ok) throw new Error("Unable to load doctors");
+
+  const body = (await response.json()) as DoctorsResponse;
+  return body.data;
+>>>>>>> origin/feat/day-1-doctor-booking-flow
 }
