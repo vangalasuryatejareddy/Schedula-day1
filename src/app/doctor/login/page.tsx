@@ -1,6 +1,22 @@
 "use client";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { findDoctorAccount, setDoctorSession } from "@/features/doctor-portal/storage";
-export default function DoctorLoginPage(){const router=useRouter();const search=useSearchParams();const [identifier,setIdentifier]=useState("");const [password,setPassword]=useState("");const [show,setShow]=useState(false);const [error,setError]=useState("");const [busy,setBusy]=useState(false);const submit=(e:React.FormEvent)=>{e.preventDefault();setError("");if(!identifier.trim()||!password)return setError("Enter your email or username and password.");const doctor=findDoctorAccount(identifier,password);if(!doctor)return setError("We couldn’t verify those credentials. Check your details or create an account.");setBusy(true);setDoctorSession(doctor.id);setTimeout(()=>router.push("/doctor/dashboard"),250)};return <main className="min-h-screen bg-[var(--canvas)] px-4 py-6 sm:px-6 sm:py-10"><div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-5xl overflow-hidden rounded-3xl border border-[var(--line)] bg-white shadow-[0_24px_80px_rgba(27,41,37,0.08)] lg:grid-cols-[1fr_1fr]"><section className="hidden bg-[var(--brand-deep)] p-10 text-white lg:flex lg:flex-col lg:justify-between"><div><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-white/10 font-bold">S</span><span><strong>Schedula</strong><span className="block text-xs text-emerald-100/70">Doctor portal</span></span></div><p className="mt-16 text-sm font-semibold text-emerald-200">A focused workspace for clinicians</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Your practice, clearly organized.</h1><p className="mt-5 max-w-md text-sm leading-7 text-emerald-50/75">Manage your professional profile, publish appointment availability, and stay on top of patient bookings from one responsive workspace.</p></div><div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-emerald-50/75"><strong className="block text-white">Day 2 flow</strong><p className="mt-2">Register → Login → Dashboard → Profile → Availability → Appointments</p></div></section><section className="flex items-center p-6 sm:p-10"><div className="mx-auto w-full max-w-md"><Link href="/doctors" className="mb-10 flex items-center gap-3 lg:hidden"><span className="grid size-10 place-items-center rounded-xl bg-[var(--brand)] font-bold text-white">S</span><span><strong>Schedula</strong><span className="block text-xs text-[var(--muted)]">Doctor portal</span></span></Link>{search.get("registered")==="1"?<p role="status" className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">Registration successful. Sign in with your new doctor account.</p>:null}<p className="text-sm font-semibold text-[var(--brand)]">Welcome back</p><h2 className="mt-2 text-3xl font-bold tracking-tight">Sign in to your portal</h2><p className="mt-2 text-sm leading-6 text-[var(--muted)]">Use the email or username and password you created during registration.</p>{error?<p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">{error}</p>:null}<form onSubmit={submit} className="mt-7 space-y-5"><label className="block text-sm font-semibold">Email or username<input value={identifier} onChange={e=>setIdentifier(e.target.value)} autoComplete="username" placeholder="doctor@clinic.com" className="mt-1.5 h-12 w-full rounded-xl border border-[var(--line)] px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"/></label><label className="block text-sm font-semibold">Password<div className="relative mt-1.5"><input value={password} onChange={e=>setPassword(e.target.value)} type={show?"text":"password"} autoComplete="current-password" placeholder="Enter your password" className="h-12 w-full rounded-xl border border-[var(--line)] px-4 pr-20 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"/><button type="button" onClick={()=>setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-3 py-2 text-xs font-bold text-[var(--brand)]">{show?"Hide":"Show"}</button></div></label><button disabled={busy} className="h-12 w-full rounded-xl bg-[var(--brand)] text-sm font-bold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50">{busy?"Signing in…":"Sign in to dashboard →"}</button></form><div className="mt-7 border-t border-[var(--line)] pt-6 text-sm text-[var(--muted)]">New to Schedula? <Link href="/doctor/register" className="font-bold text-[var(--brand)]">Create your doctor account</Link></div><Link href="/login" className="mt-5 inline-block text-sm font-semibold text-[var(--brand)] hover:underline">← Go to user portal</Link></div></section></div></main>}
+
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+
+function DoctorLoginContent() {
+  const searchParams = useSearchParams();
+
+  return (
+    <div>
+      {/* Your existing Doctor Login UI goes here */}
+    </div>
+  );
+}
+
+export default function DoctorLoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DoctorLoginContent />
+    </Suspense>
+  );
+}
