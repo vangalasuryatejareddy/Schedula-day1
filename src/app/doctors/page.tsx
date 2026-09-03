@@ -1,5 +1,2 @@
-import { DoctorsView } from "@/features/appointments/components/DoctorsView";
-
-export default function DoctorsPage() {
-  return <DoctorsView />;
-}
+import { SchedulaApp } from "@/components/SchedulaApp";
+export default function Page(){ return <SchedulaApp initialMode="user" initialView="doctors" />; }
