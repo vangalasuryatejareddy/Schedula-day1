@@ -1,241 +1,77 @@
- "use client";
+'use client';
+import { useEffect, useMemo, useState } from 'react';
 
-import { useEffect, useMemo, useState } from "react";
+type Role = 'guest' | 'user' | 'doctor';
+type Status = 'Pending' | 'Confirmed' | 'Upcoming' | 'Completed' | 'Cancelled' | 'Missed';
+type Doctor = { id:string; name:string; specialty:string; experience:number; rating:number; fee:number; hospital:string; bio:string; color:string; slots:string[] };
+type Appointment = { id:string; doctorId:string; doctor:string; patient:string; date:string; time:string; type:string; status:Status; notes?:string; prescriptionId?:string };
+type Prescription = { id:string; appointmentId:string; doctor:string; patient:string; diagnosis:string; medicines:{name:string; dosage:string; duration:string; instructions:string}[]; instructions:string; createdAt:string };
+type Notification = { id:string; title:string; body:string; read:boolean; createdAt:string };
+type AppState = { doctors:Doctor[]; appointments:Appointment[]; prescriptions:Prescription[]; notifications:Notification[]; profile:{name:string; email:string; phone:string; conditions:string; allergies:string; medications:string; insurance:string; emergency:string}; availability:string[] };
 
-type Props = { initialMode:"user"|"doctor"; initialView:string };
-type Data = any;
-
-const userLinks = [
-  ["Home","/"],["Doctor List","/doctors"],["Book Appointment","/booking"],
-  ["My Appointments","/user/appointments"],["My Profile","/user/profile"]
+const doctorsSeed: Doctor[] = [
+  { id:'d1', name:'Dr. Arjun Rao', specialty:'Cardiology', experience:12, rating:4.9, fee:850, hospital:'Metro Heart Institute', bio:'Preventive and clinical cardiology with patient-first care.', color:'#2f7df6', slots:['09:00 AM','10:30 AM','02:00 PM','04:30 PM'] },
+  { id:'d2', name:'Dr. Maya Sharma', specialty:'Dermatology', experience:9, rating:4.8, fee:700, hospital:'CarePlus Clinic', bio:'Skin, hair and preventive dermatology consultations.', color:'#a855f7', slots:['09:30 AM','11:00 AM','01:30 PM','05:00 PM'] },
+  { id:'d3', name:'Dr. Rohan Mehta', specialty:'Orthopedics', experience:14, rating:4.9, fee:900, hospital:'Motion & Bone Center', bio:'Sports injuries, joints and mobility recovery.', color:'#f97316', slots:['08:30 AM','10:00 AM','03:00 PM','05:30 PM'] },
+  { id:'d4', name:'Dr. Elena Morgan', specialty:'Pediatrics', experience:8, rating:4.9, fee:750, hospital:'Little Steps Hospital', bio:'Family-focused pediatric consultations and follow-up.', color:'#14b8a6', slots:['10:00 AM','12:00 PM','03:30 PM','04:30 PM'] }
 ];
-const doctorLinks = [
-  ["Dashboard","/doctor/dashboard"],["Appointments","/doctor/appointments"],
-  ["Calendar","/doctor/calendar"],["Profile & Availability","/doctor/profile"],
-  ["Prescriptions","/doctor/prescriptions"]
-];
+const initialState: AppState = {
+ doctors: doctorsSeed,
+ appointments: [
+  {id:'a1',doctorId:'d1',doctor:'Dr. Arjun Rao',patient:'Alex Johnson',date:'2026-09-10',time:'10:30 AM',type:'Consultation',status:'Confirmed',notes:'Routine follow-up'},
+  {id:'a2',doctorId:'d2',doctor:'Dr. Maya Sharma',patient:'Alex Johnson',date:'2026-08-20',time:'11:00 AM',type:'Follow-up',status:'Completed',notes:'Skin follow-up',prescriptionId:'p1'},
+  {id:'a3',doctorId:'d3',doctor:'Dr. Rohan Mehta',patient:'Alex Johnson',date:'2026-09-13',time:'03:00 PM',type:'Consultation',status:'Pending'}
+ ],
+ prescriptions:[{id:'p1',appointmentId:'a2',doctor:'Dr. Maya Sharma',patient:'Alex Johnson',diagnosis:'Mild dermatitis',medicines:[{name:'Moisturizing cream',dosage:'Apply twice daily',duration:'14 days',instructions:'Apply on clean, dry skin'},{name:'Antihistamine',dosage:'As advised',duration:'5 days',instructions:'Use only as directed by clinician'}],instructions:'Avoid known irritants and attend follow-up if symptoms persist.',createdAt:'2026-08-20'}],
+ notifications:[{id:'n1',title:'Appointment confirmed',body:'Your consultation with Dr. Arjun Rao is confirmed.',read:false,createdAt:'Today'},{id:'n2',title:'Prescription available',body:'Your completed appointment prescription is ready to view.',read:false,createdAt:'Yesterday'}],
+ profile:{name:'Alex Johnson',email:'patient@schedula.demo',phone:'+91 98765 43210',conditions:'None recorded',allergies:'No known allergies',medications:'None',insurance:'Schedula Demo Health',emergency:'Sam Johnson · +91 98765 00000'},
+ availability:['2026-09-10 09:00 AM','2026-09-10 10:30 AM','2026-09-10 02:00 PM','2026-09-11 09:00 AM','2026-09-11 11:00 AM']
+};
+const statusClass: Record<Status,string> = {Pending:'pending',Confirmed:'confirmed',Upcoming:'upcoming',Completed:'completed',Cancelled:'cancelled',Missed:'missed'};
+const uid = (p:string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
 
-const statuses = ["All","Pending","Confirmed","Upcoming","Completed","Cancelled","Missed"];
+export default function SchedulaApp() {
+ const [state,setState] = useState<AppState>(initialState); const [role,setRole] = useState<Role>('guest'); const [page,setPage] = useState('home'); const [menu,setMenu] = useState(false); const [toast,setToast] = useState(''); const [selectedDoctor,setSelectedDoctor] = useState<Doctor | null>(null); const [selectedDate,setSelectedDate] = useState('2026-09-10'); const [selectedTime,setSelectedTime] = useState(''); const [search,setSearch] = useState(''); const [filter,setFilter] = useState('All'); const [aiOpen,setAiOpen] = useState(false); const [aiMessages,setAiMessages] = useState<{from:'user'|'ai';text:string}[]>([{from:'ai',text:'Hi! I’m Schedula AI Care Assistant. I can help you find the right specialist, understand your appointments, and answer general health questions.'}]); const [aiText,setAiText] = useState(''); const [aiLoading,setAiLoading] = useState(false);
+ useEffect(()=>{ const raw=localStorage.getItem('schedula-final-state'); if(raw) try{setState(JSON.parse(raw));}catch{} },[]);
+ useEffect(()=>{ if(role==='guest') return; localStorage.setItem('schedula-final-state',JSON.stringify(state)); const t=setTimeout(()=>fetch('/api/data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state})}).catch(()=>{}),500); return()=>clearTimeout(t); },[state,role]);
+ const notify=(title:string,body:string)=>{setState(s=>({...s,notifications:[{id:uid('n'),title,body,read:false,createdAt:'Just now'},...s.notifications]})); setToast(title); setTimeout(()=>setToast(''),2200)};
+ const login=(next:Role)=>{setRole(next);setPage(next==='doctor'?'doctor-dashboard':'doctors');notify('Welcome to Schedula',next==='doctor'?'Doctor workspace is ready.':'Your healthcare dashboard is ready.');};
+ const logout=()=>{setRole('guest');setPage('home');setMenu(false);};
+ const dates=['2026-09-10','2026-09-11','2026-09-12','2026-09-13','2026-09-14'];
+ const filteredDoctors=useMemo(()=>state.doctors.filter(d=>(d.name+d.specialty).toLowerCase().includes(search.toLowerCase())),[state.doctors,search]);
+ const userAppointments=useMemo(()=>state.appointments.filter(a=>a.patient==='Alex Johnson'),[state.appointments]);
+ const changeStatus=(id:string,status:Status)=>{setState(s=>({...s,appointments:s.appointments.map(a=>a.id===id?{...a,status}:a)}));notify(`Appointment ${status.toLowerCase()}`,'Your appointment details and notifications were updated.');};
+ const book=()=>{ if(!selectedDoctor||!selectedTime){setToast('Please choose a time slot');return;} const a:Appointment={id:uid('a'),doctorId:selectedDoctor.id,doctor:selectedDoctor.name,patient:'Alex Johnson',date:selectedDate,time:selectedTime,type:'Consultation',status:'Pending'}; setState(s=>({...s,appointments:[a,...s.appointments]})); notify('Booking created',`Your request with ${selectedDoctor.name} is pending confirmation.`);setPage('appointments');setSelectedTime('');};
+ const addAvailability=()=>{const value=`2026-09-${10+Math.floor(Math.random()*10)} ${['09:00 AM','11:00 AM','02:00 PM','04:00 PM'][Math.floor(Math.random()*4)]}`;setState(s=>({...s,availability:[...s.availability,value]}));notify('Availability added',value);};
+ const createPrescription=(a:Appointment)=>{const existing=state.prescriptions.find(p=>p.appointmentId===a.id); if(existing){setPage('prescriptions');return;} const p:Prescription={id:uid('p'),appointmentId:a.id,doctor:a.doctor,patient:a.patient,diagnosis:'Follow-up assessment',medicines:[{name:'Medication / care item',dosage:'As prescribed',duration:'7 days',instructions:'Follow clinician instructions'}],instructions:'Continue recommended care and book a follow-up if needed.',createdAt:new Date().toISOString().slice(0,10)};setState(s=>({...s,prescriptions:[p,...s.prescriptions],appointments:s.appointments.map(x=>x.id===a.id?{...x,prescriptionId:p.id,status:'Completed'}:x)}));notify('Prescription created','The user can now view and download the prescription.');};
+ const downloadPdf=async(p:Prescription)=>{const { jsPDF } = await import('jspdf'); const doc=new jsPDF(); doc.setFontSize(22);doc.text('Schedula Prescription',20,20);doc.setFontSize(11);doc.text(`Doctor: ${p.doctor}`,20,35);doc.text(`Patient: ${p.patient}`,20,42);doc.text(`Date: ${p.createdAt}`,20,49);doc.text(`Diagnosis: ${p.diagnosis}`,20,60);let y=75;p.medicines.forEach((m,i)=>{doc.text(`${i+1}. ${m.name} — ${m.dosage} — ${m.duration}`,20,y);y+=8;doc.text(m.instructions,25,y);y+=10;});doc.text(`Instructions: ${p.instructions}`,20,y+8);doc.save(`schedula-prescription-${p.id}.pdf`);};
+ const sendAI=async()=>{const message=aiText.trim();if(!message)return;setAiMessages(m=>[...m,{from:'user',text:message}]);setAiText('');setAiLoading(true);try{const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,doctors:state.doctors.map(d=>({name:d.name,specialty:d.specialty}))})});const data=await r.json();setAiMessages(m=>[...m,{from:'ai',text:data.reply||data.error||'Please try again.'}]);}catch{setAiMessages(m=>[...m,{from:'ai',text:'I could not reach the assistant. Please try again.'}]);}finally{setAiLoading(false)}};
+ const nav=(target:string)=>{setPage(target);setMenu(false)};
+ if(role==='guest') return <Landing login={login} />;
+ return <div className="app-shell"><aside className={`sidebar ${menu?'open':''}`}><div className="brand"><span>✚</span><b>Schedula</b></div><p className="role-label">{role==='doctor'?'DOCTOR PORTAL':'PATIENT PORTAL'}</p><nav>{(role==='doctor'?[['doctor-dashboard','◈','Dashboard'],['doctor-calendar','▦','Calendar'],['doctor-appointments','▤','Appointments'],['doctor-profile','♙','Profile'],['doctor-prescriptions','▣','Prescriptions']]:[['doctors','⌕','Find Doctors'],['appointments','▤','My Appointments'],['prescriptions','▣','Prescriptions'],['profile','♙','My Profile'],['notifications','◌','Notifications']]).map(([id,icon,label])=><button key={id} className={page===id?'active':''} onClick={()=>nav(id)}><span>{icon}</span>{label}</button>)}</nav><div className="side-bottom"><button onClick={()=>setAiOpen(true)}>✦ AI Care Assistant</button><button onClick={logout}>⇥ Sign out</button></div></aside><main className="main"><header className="top"><button className="hamb" onClick={()=>setMenu(!menu)}>☰</button><div><small>Healthcare, simplified</small><h3>{page.replace('doctor-','').replaceAll('-',' ')}</h3></div><div className="top-actions"><button className="icon-btn" onClick={()=>nav('notifications')}>◌<i>{state.notifications.filter(n=>!n.read).length}</i></button><button className="ai-button" onClick={()=>setAiOpen(true)}>✦ Ask Care AI</button><div className="avatar">{role==='doctor'?'DR':'AJ'}</div></div></header>
+ {role==='user'?<UserPages/>:<DoctorPages/>}
+ </main>{toast&&<div className="toast">✓ {toast}</div>}{aiOpen&&<div className="ai-panel"><div className="ai-head"><div><b>✦ Schedula AI Care</b><small>General health & appointment guidance</small></div><button onClick={()=>setAiOpen(false)}>×</button></div><div className="ai-chat">{aiMessages.map((m,i)=><div key={i} className={`bubble ${m.from}`}>{m.text}</div>)}{aiLoading&&<div className="bubble ai">Thinking…</div>}</div><div className="ai-input"><input value={aiText} onChange={e=>setAiText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAI()} placeholder="Ask about care or appointments…"/><button onClick={sendAI}>Send</button></div><p className="ai-safe">Not for emergencies or diagnosis. Contact a clinician for medical decisions.</p></div>}</div>;
 
-export function SchedulaApp({initialMode,initialView}:Props){
-  const [data,setData]=useState<Data|null>(null);
-  const [mode,setMode]=useState(initialMode);
-  const [view,setView]=useState(initialView);
-  const [menu,setMenu]=useState(false);
-  const [query,setQuery]=useState("");
-  const [toast,setToast]=useState("");
-  const [tab,setTab]=useState("Upcoming");
-  const [selectedDoctor,setSelectedDoctor]=useState<any>(null);
-  const [selectedSlot,setSelectedSlot]=useState<any>(null);
-  const [aiOpen,setAiOpen]=useState(false);
-  const [aiMessages,setAiMessages]=useState([{role:"assistant",text:"Hi! I’m Schedula AI Care Assistant. I can help with appointments, doctor specialties and general healthcare questions."}]);
-  const [aiInput,setAiInput]=useState("");
-  const [busy,setBusy]=useState(false);
-
-  useEffect(()=>{ fetch("/api/state").then(r=>r.json()).then(setData).catch(()=>setToast("Could not load application data.")); },[]);
-
-  async function persist(next:any, message?:string){
-    setData(next);
-    await fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)});
-    if(message){setToast(message); setTimeout(()=>setToast(""),3500);}
-  }
-  function addNotification(next:any,text:string){
-    next.notifications=[{id:crypto.randomUUID(),text,read:false,createdAt:new Date().toISOString()},...(next.notifications||[])];
-  }
-  function go(label:string,href:string){
-    setMenu(false);
-    if(label==="Home"){setMode("user");setView("home");}
-    else if(label==="Doctor List"){setMode("user");setView("doctors");}
-    else if(label==="Book Appointment"){setMode("user");setView("booking");}
-    else if(label==="My Appointments"){setMode("user");setView("appointments");}
-    else if(label==="My Profile"){setMode("user");setView("profile");}
-    else {setMode("doctor");setView(label==="Profile & Availability"?"profile":label.toLowerCase());}
-    window.history.pushState({}, "", href);
-  }
-
-  const doctors=useMemo(()=>data?.doctors?.filter((d:any)=>`${d.name} ${d.specialty} ${d.location}`.toLowerCase().includes(query.toLowerCase()))||[],[data,query]);
-  const currentDoctor=data?.doctors?.[0];
-
-  function book(){
-    if(!data||!selectedDoctor||!selectedSlot) return setToast("Select a doctor and an available slot first.");
-    if(selectedSlot.booked) return setToast("That slot is no longer available.");
-    const next=structuredClone(data);
-    const appointment={id:crypto.randomUUID(),patient:next.profile.name,patientEmail:next.profile.email,doctorId:selectedDoctor.id,doctor:selectedDoctor.name,specialty:selectedDoctor.specialty,date:selectedSlot.date,time:selectedSlot.time,type:"Consultation",status:"Pending",notes:"Booked through Schedula"};
-    next.appointments.push(appointment);
-    next.slots=next.slots.map((s:any)=>s.id===selectedSlot.id?{...s,booked:true}:s);
-    addNotification(next,`Appointment request sent to ${selectedDoctor.name} for ${selectedSlot.date} at ${selectedSlot.time}.`);
-    persist(next,"Appointment booked successfully. The doctor can now confirm or decline it.");
-    setSelectedSlot(null);
-  }
-
-  function updateStatus(a:any,status:string){
-    const next=structuredClone(data);
-    next.appointments=next.appointments.map((x:any)=>x.id===a.id?{...x,status}:x);
-    addNotification(next,`Your appointment with ${a.doctor} is now ${status}.`);
-    persist(next,`Appointment marked as ${status}.`);
-  }
-
-  function reschedule(a:any){
-    const next=structuredClone(data);
-    const slot=next.slots.find((s:any)=>s.doctorId===a.doctorId&&!s.booked);
-    if(!slot) return setToast("No available slot found for rescheduling.");
-    next.slots=next.slots.map((s:any)=>s.id===slot.id?{...s,booked:true}:s);
-    next.appointments=next.appointments.map((x:any)=>x.id===a.id?{...x,date:slot.date,time:slot.time,status:"Confirmed"}:x);
-    addNotification(next,`Appointment rescheduled to ${slot.date} at ${slot.time}.`);
-    persist(next,"Appointment rescheduled and user notified.");
-  }
-
-  function createPrescription(a:any){
-    const diagnosis=prompt("Diagnosis","Follow-up review")||"Follow-up review";
-    const instructions=prompt("Instructions","Follow the doctor’s instructions and return if symptoms worsen.")||"Follow instructions.";
-    const next=structuredClone(data);
-    const p={id:crypto.randomUUID(),appointmentId:a.id,patient:a.patient,doctor:a.doctor,diagnosis,medicines:[{name:"Recommended medicine",dosage:"As prescribed",duration:"7 days"}],instructions};
-    next.prescriptions.push(p);
-    next.appointments=next.appointments.map((x:any)=>x.id===a.id?{...x,prescriptionId:p.id,status:"Completed"}:x);
-    addNotification(next,`Prescription available for appointment with ${a.doctor}.`);
-    persist(next,"Prescription saved and linked to the completed appointment.");
-  }
-
-  function addSlot(){
-    if(!data) return;
-    const date=prompt("Date (YYYY-MM-DD)","2026-09-15"); if(!date)return;
-    const time=prompt("Time","10:00 AM"); if(!time)return;
-    const next=structuredClone(data);
-    next.slots.push({id:crypto.randomUUID(),doctorId:currentDoctor.id,date,time,booked:false,recurring:false});
-    persist(next,"Availability slot added.");
-  }
-
-  function removeSlot(id:string){
-    const next=structuredClone(data);
-    next.slots=next.slots.filter((s:any)=>s.id!==id||s.booked);
-    persist(next,"Availability updated.");
-  }
-
-  async function downloadPrescription(p:any){
-    const { jsPDF } = await import("jspdf");
-    const pdf = new jsPDF();
-    const lines = [
-      "SCHEDULA HEALTHCARE",
-      "PRESCRIPTION",
-      "",
-      `Patient: ${p.patient}`,
-      `Doctor: ${p.doctor}`,
-      `Diagnosis: ${p.diagnosis}`,
-      "",
-      "Medicines:",
-      ...p.medicines.map((m:any)=>`${m.name} - ${m.dosage} - ${m.duration}`),
-      "",
-      "Instructions:",
-      p.instructions
-    ];
-    pdf.setFontSize(18);
-    pdf.text("SCHEDULA HEALTHCARE", 20, 20);
-    pdf.setFontSize(13);
-    pdf.text("PRESCRIPTION", 20, 30);
-    pdf.setFontSize(11);
-    let y = 45;
-    for (const line of lines.slice(3)) {
-      const wrapped = pdf.splitTextToSize(String(line), 165);
-      if (y + wrapped.length * 7 > 280) { pdf.addPage(); y = 20; }
-      pdf.text(wrapped, 20, y);
-      y += wrapped.length * 7 + 3;
-    }
-    pdf.save("schedula-prescription.pdf");
-  }
-
-  async function askAI(){
-    const message=aiInput.trim(); if(!message||busy)return;
-    setAiInput("");setAiMessages(m=>[...m,{role:"user",text:message}]);setBusy(true);
-    try{
-      const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message})});
-      const j=await r.json(); setAiMessages(m=>[...m,{role:"assistant",text:j.answer||"I’m unable to answer that right now."}]);
-    }catch{setAiMessages(m=>[...m,{role:"assistant",text:"I’m temporarily unavailable. Please try again."}]);}
-    setBusy(false);
-  }
-
-  if(!data)return <div className="boot"><div className="loader"></div><h2>Loading Schedula</h2><p>Preparing your healthcare workspace…</p></div>;
-
-  const links=mode==="doctor"?doctorLinks:userLinks;
-  const unread=(data.notifications||[]).filter((n:any)=>!n.read).length;
-  const appointments=data.appointments||[];
-
-  const renderHome=()=>(
-    <><section className="hero"><div><span className="pill">Healthcare made simpler</span><h1>Your care.<br/><em>One connected schedule.</em></h1><p>Discover doctors, book appointments, manage prescriptions and keep your healthcare journey organized in one professional workspace.</p><div className="row"><button className="btn primary" onClick={()=>setView("doctors")}>Find a doctor</button><button className="btn ghost" onClick={()=>{setMode("doctor");setView("dashboard")}}>Doctor portal</button></div></div><div className="hero-card"><div className="pulse">24/7</div><h3>Connected care</h3><p>Appointments, availability, prescriptions and notifications stay connected.</p><div className="metric"><b>{data.doctors.length}</b><span>Specialist profiles</span></div><div className="metric"><b>{appointments.length}</b><span>Appointments tracked</span></div></div></section><section><div className="section-head"><div><span className="eyebrow">Featured care</span><h2>Find the right specialist</h2></div><button className="text-btn" onClick={()=>setView("doctors")}>View all doctors →</button></div><div className="grid doctors">{data.doctors.slice(0,3).map((d:any)=><DoctorCard key={d.id} d={d} onBook={()=>{setSelectedDoctor(d);setView("booking")}} />)}</div></section></>
-  );
-
-  const renderDoctors=()=>(
-    <><div className="page-head"><span className="eyebrow">Care directory</span><h1>Find your doctor</h1><p>Browse trusted specialists and book an available time.</p><input className="search" placeholder="Search doctor, specialty or location" value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="grid doctors">{doctors.length?doctors.map((d:any)=><DoctorCard key={d.id} d={d} onBook={()=>{setSelectedDoctor(d);setView("booking")}}/>):<Empty text="No doctors match your search."/>}</div></>
-  );
-
-  const renderBooking=()=>{
-    const d=selectedDoctor||data.doctors[0];
-    const slots=data.slots.filter((s:any)=>s.doctorId===d.id&&!s.booked);
-    return <><div className="page-head"><span className="eyebrow">Secure booking</span><h1>Book an appointment</h1><p>Select a doctor, review available slots and confirm your appointment.</p></div><div className="booking-layout"><div className="card"><h3>1. Choose doctor</h3><select value={d.id} onChange={e=>{setSelectedDoctor(data.doctors.find((x:any)=>x.id===e.target.value));setSelectedSlot(null)}}>{data.doctors.map((x:any)=><option key={x.id} value={x.id}>{x.name} — {x.specialty}</option>)}</select><div className="doctor-summary"><div className="avatar">{d.name.split(" ").slice(-1)[0][0]}</div><div><b>{d.name}</b><p>{d.specialty} · {d.experience}</p></div></div><h3>2. Available slots</h3><div className="slots">{slots.length?slots.map((s:any)=><button key={s.id} className={`slot ${selectedSlot?.id===s.id?"active":""}`} onClick={()=>setSelectedSlot(s)}>{s.date}<b>{s.time}</b></button>):<Empty text="No open slots available."/ >}</div></div><div className="card booking-confirm"><h3>3. Confirm appointment</h3><p><b>Doctor:</b> {d.name}</p><p><b>Date:</b> {selectedSlot?.date||"Select a date"}</p><p><b>Time:</b> {selectedSlot?.time||"Select a time"}</p><p><b>Type:</b> Consultation</p><button className="btn primary wide" onClick={book}>Confirm appointment</button><small>You will receive an appointment notification after booking.</small></div></div></>
-  };
-
-  const renderUserAppointments=()=>{
-    const visible=appointments.filter((a:any)=>tab==="Upcoming"?["Pending","Confirmed","Upcoming"].includes(a.status):a.status===tab);
-    return <><PageTitle title="My appointments" subtitle="Track your care, prescriptions and follow-up actions."/><div className="tabs">{["Upcoming","Completed","Cancelled","Missed"].map(x=><button key={x} className={tab===x?"active":""} onClick={()=>setTab(x)}>{x}</button>)}</div>{visible.length?visible.map((a:any)=>{const p=data.prescriptions.find((x:any)=>x.appointmentId===a.id);return <AppointmentCard key={a.id} a={a} actions={<div className="actions">{tab==="Completed"&&<>{p?<><button className="btn secondary" onClick={()=>alert(`Diagnosis: ${p.diagnosis}\nMedicines: ${p.medicines.map((m:any)=>m.name).join(", ")}\nInstructions: ${p.instructions}`)}>View prescription</button><button className="btn secondary" onClick={()=>downloadPrescription(p)}>Download prescription</button></>:<span className="muted">Prescription Not Available</span>}<button className="btn secondary" onClick={()=>setToast("Thank you! Your review has been recorded.")}>Review doctor</button><button className="btn primary" onClick={()=>{setSelectedDoctor(data.doctors.find((d:any)=>d.id===a.doctorId));setView("booking")}}>Rebook</button></>}</div>}/>}):<Empty text={`No ${tab.toLowerCase()} appointments.`}/>}</>
-  };
-
-  const renderDoctorDashboard=()=>{
-    const upcoming=appointments.filter((a:any)=>["Pending","Confirmed","Upcoming"].includes(a.status)&&a.doctorId===currentDoctor.id);
-    return <><PageTitle title={`Welcome back, ${currentDoctor.name}`} subtitle="Your upcoming care schedule and quick actions at a glance."/><div className="stats"><Stat label="Upcoming" value={upcoming.length}/><Stat label="Pending" value={upcoming.filter((a:any)=>a.status==="Pending").length}/><Stat label="Open slots" value={data.slots.filter((s:any)=>s.doctorId===currentDoctor.id&&!s.booked).length}/><Stat label="Prescriptions" value={data.prescriptions.filter((p:any)=>p.doctor===currentDoctor.name).length}/></div><div className="section-head"><div><span className="eyebrow">Upcoming schedule</span><h2>Patient appointments</h2></div><div className="quick"><button className="btn secondary" onClick={()=>setView("profile")}>My profile</button><button className="btn primary" onClick={()=>setView("appointments")}>View all appointments</button></div></div>{upcoming.length?upcoming.map((a:any)=><AppointmentCard key={a.id} a={a} actions={<div className="actions"><button className="btn secondary" onClick={()=>alert(`Patient: ${a.patient}\nEmail: ${a.patientEmail}\nNotes: ${a.notes||"No notes"}`)}>👤 Patient details</button><button className="btn secondary" onClick={()=>setView("calendar")}>🗓 Calendar</button><button className="btn primary" onClick={()=>setView("appointments")}>View details</button></div>}/>):<Empty text="No upcoming appointments. Create availability to receive bookings."/ >}</>
-  };
-
-  const renderDoctorAppointments=()=>{
-    const [q,setQ]=[query,setQuery];
-    const visible=appointments.filter((a:any)=>a.doctorId===currentDoctor.id&&(tab==="All"||a.status===tab)&&(`${a.patient} ${a.type} ${a.date}`.toLowerCase().includes(q.toLowerCase())));
-    return <><PageTitle title="Appointment management" subtitle="Search, filter and manage the complete appointment lifecycle."/><div className="toolbar"><input className="search" placeholder="Search patient or appointment" value={q} onChange={e=>setQ(e.target.value)}/><select value={tab} onChange={e=>setTab(e.target.value)}>{statuses.map(s=><option key={s}>{s}</option>)}</select></div>{visible.length?visible.map((a:any)=><AppointmentCard key={a.id} a={a} actions={<div className="actions">{a.status==="Pending"&&<><button className="btn primary" onClick={()=>updateStatus(a,"Confirmed")}>Confirm</button><button className="btn danger" onClick={()=>updateStatus(a,"Cancelled")}>Decline</button></>}{["Confirmed","Upcoming"].includes(a.status)&&<><button className="btn secondary" onClick={()=>reschedule(a)}>Reschedule</button><button className="btn danger" onClick={()=>updateStatus(a,"Cancelled")}>Cancel</button><button className="btn primary" onClick={()=>updateStatus(a,"Completed")}>Mark completed</button><button className="btn secondary" onClick={()=>updateStatus(a,"Missed")}>Mark missed</button></>}{a.status==="Completed"&&<button className="btn primary" onClick={()=>createPrescription(a)}>View / create prescription</button>}</div>}/>):<Empty text="No appointments match the selected filters."/ >}</>
-  };
-
-  const renderCalendar=()=>{
-    const ap=appointments.filter((a:any)=>a.doctorId===currentDoctor.id);
-    const sl=data.slots.filter((s:any)=>s.doctorId===currentDoctor.id);
-    return <><PageTitle title="Calendar & availability" subtitle="Day, week and month planning with appointment and availability visibility."/><div className="calendar-switch"><button className="active">Month</button><button>Week</button><button>Day</button><button className="btn primary" onClick={addSlot}>+ Add slot</button></div><div className="calendar-grid">{[...new Set([...sl.map((s:any)=>s.date),...ap.map((a:any)=>a.date)])].sort().map((date:any)=><div className="day-col" key={date}><h3>{date}</h3>{sl.filter((s:any)=>s.date===date).map((s:any)=><div className={`calendar-item ${s.booked?"booked":"available"}`} key={s.id}><b>{s.time}</b><span>{s.booked?"Booked":"Available"}</span></div>)}{ap.filter((a:any)=>a.date===date).map((a:any)=><div className={`calendar-item appt ${a.status.toLowerCase()}`} key={a.id}><b>{a.time}</b><span>{a.patient} · {a.status}</span>{["Pending","Confirmed","Upcoming"].includes(a.status)&&<button className="mini" onClick={()=>reschedule(a)}>Move to next available slot</button>}</div>)}</div>)}</div></>
-  };
-
-  const renderProfile=()=>{
-    if(mode==="doctor"){
-      const slots=data.slots.filter((s:any)=>s.doctorId===currentDoctor.id);
-      return <><PageTitle title="Doctor profile & availability" subtitle="Manage professional information and appointment availability."/><ProfileForm values={data.doctorProfile} onSave={(vals:any)=>{const next=structuredClone(data);next.doctorProfile={...next.doctorProfile,...vals};next.doctors[0]={...next.doctors[0],name:vals.name,specialty:vals.specialty,experience:vals.experience,bio:vals.bio};persist(next,"Doctor profile updated.");}}/><section className="card"><div className="section-head"><div><h2>Appointment availability</h2><p>Create and manage slots. Unbooked slots become selectable in the User Portal.</p></div><button className="btn primary" onClick={addSlot}>+ Add availability</button></div><div className="slot-list">{slots.map((s:any)=><div className="slot-row" key={s.id}><span>{s.date} · <b>{s.time}</b></span><span className={s.booked?"status pending":"status confirmed"}>{s.booked?"Booked":"Available"}</span>{!s.booked&&<button className="text-btn danger-text" onClick={()=>removeSlot(s.id)}>Remove</button>}</div>)}</div></section></>
-    }
-    return <><PageTitle title="My health profile" subtitle="Keep your personal and healthcare information up to date."/><ProfileForm values={data.profile} onSave={(vals:any)=>{const next=structuredClone(data);next.profile={...next.profile,...vals};persist(next,"Profile updated successfully.");}}/><div className="stats"><Stat label="Total prescriptions" value={data.prescriptions.length}/><Stat label="Completed appointments" value={appointments.filter((a:any)=>a.status==="Completed").length}/><Stat label="Test reports" value={0}/></div></>
-  };
-
-  const renderPrescriptions=()=>{
-    const ps=data.prescriptions.filter((p:any)=>p.doctor===currentDoctor.name);
-    return <><PageTitle title="Prescription management" subtitle="Create, review and update prescriptions linked to completed appointments."/><div className="toolbar"><input className="search" placeholder="Search prescriptions" value={query} onChange={e=>setQuery(e.target.value)}/></div>{ps.filter((p:any)=>`${p.patient} ${p.diagnosis}`.toLowerCase().includes(query.toLowerCase())).length?ps.filter((p:any)=>`${p.patient} ${p.diagnosis}`.toLowerCase().includes(query.toLowerCase())).map((p:any)=><div className="card prescription" key={p.id}><div><span className="eyebrow">Patient</span><h2>{p.patient}</h2><p><b>Diagnosis:</b> {p.diagnosis}</p><p><b>Medicines:</b> {p.medicines.map((m:any)=>`${m.name} (${m.dosage})`).join(", ")}</p><p>{p.instructions}</p></div><button className="btn secondary" onClick={()=>downloadPrescription(p)}>Download copy</button></div>):<Empty text="No prescriptions found. Complete an appointment and create a prescription."/ >}</>
-  };
-
-  const renderLogin=()=> <AuthCard title="Doctor Login" subtitle="Access your professional Schedula workspace." button="Login to dashboard" onDone={()=>{setView("dashboard");setToast("Doctor login successful.");}} extra="New to Schedula?" extraAction={()=>setView("register")} />;
-  const renderRegister=()=> <AuthCard title="Doctor Registration" subtitle="Create your professional healthcare account." button="Create doctor account" onDone={()=>{setView("login");setToast("Registration successful. Please login.");}} extra="Already registered?" extraAction={()=>setView("login")} register/>;
-
-  let content:any=renderHome();
-  if(view==="doctors")content=renderDoctors();
-  if(view==="booking")content=renderBooking();
-  if(mode==="user"&&view==="appointments")content=renderUserAppointments();
-  if(mode==="user"&&view==="profile")content=renderProfile();
-  if(mode==="doctor"&&view==="dashboard")content=renderDoctorDashboard();
-  if(mode==="doctor"&&view==="appointments")content=renderDoctorAppointments();
-  if(mode==="doctor"&&view==="calendar")content=renderCalendar();
-  if(mode==="doctor"&&view==="profile")content=renderProfile();
-  if(mode==="doctor"&&view==="prescriptions")content=renderPrescriptions();
-  if(mode==="doctor"&&view==="login")content=renderLogin();
-  if(mode==="doctor"&&view==="register")content=renderRegister();
-
-  return <div className="app-shell">
-    <header><button className="brand" onClick={()=>{setMode("user");setView("home")}}><span>✚</span> SCHEDULA</button><nav className={menu?"open":""}>{links.map(([l,h])=><button key={l} onClick={()=>go(l,h)} className={view===(l==="Home"?"home":l==="Doctor List"?"doctors":l==="Book Appointment"?"booking":l==="My Appointments"?"appointments":l==="My Profile"?"profile":l==="Profile & Availability"?"profile":l.toLowerCase())?"nav-active":""}>{l}</button>)}</nav><div className="header-actions"><button className="icon-btn" onClick={()=>setAiOpen(!aiOpen)}>✦ AI Care</button><button className="icon-btn" onClick={()=>{const next=structuredClone(data);next.notifications=next.notifications.map((n:any)=>({...n,read:true}));persist(next);setToast(unread?`${unread} notifications marked as read.`:"No new notifications.");}}>🔔 {unread?unread:""}</button><button className="mode-btn" onClick={()=>{setMode(mode==="user"?"doctor":"user");setView(mode==="user"?"dashboard":"home")}}>{mode==="user"?"Doctor":"User"} Portal</button><button className="mobile-menu" onClick={()=>setMenu(!menu)}>☰</button></div></header>
-    <main>{content}</main>
-    {toast&&<div className="toast">✓ {toast}</div>}
-    {aiOpen&&<div className="ai-panel"><div className="ai-head"><div><span className="ai-dot"></span><b>Schedula AI Care Assistant</b><small>Healthcare navigation · Safety-first</small></div><button onClick={()=>setAiOpen(false)}>×</button></div><div className="ai-chat">{aiMessages.map((m,i)=><div key={i} className={`bubble ${m.role}`}>{m.text}</div>)}{busy&&<div className="bubble assistant">Thinking…</div>}</div><div className="ai-input"><input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&askAI()} placeholder="Ask about appointments or general health…"/><button className="btn primary" onClick={askAI}>Send</button></div><p className="ai-note">Not for diagnosis or emergencies. For severe symptoms, seek urgent professional care.</p></div>}
-  </div>;
+ function UserPages(){
+  if(page==='doctors') return <section className="page"><div className="hero"><div><span className="eyebrow">FIND THE RIGHT CARE</span><h1>Care that fits your life.</h1><p>Search trusted specialists, compare availability and book in a few simple steps.</p></div><div className="hero-stat"><b>24/7</b><span>Smart appointment support</span></div></div><div className="toolbar"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search doctor or specialty"/><button onClick={()=>setSearch('')}>Clear</button></div><div className="doctor-grid">{filteredDoctors.map(d=><article className="doctor-card" key={d.id}><div className="doctor-avatar" style={{background:d.color}}>{d.name.split(' ').slice(1).map(x=>x[0]).join('')}</div><div><div className="card-row"><span className="pill">{d.specialty}</span><span>★ {d.rating}</span></div><h3>{d.name}</h3><p>{d.hospital}</p><div className="meta"><span>{d.experience} yrs exp.</span><b>₹{d.fee}</b></div><button className="primary full" onClick={()=>{setSelectedDoctor(d);setPage('booking')}}>View & Book</button></div></article>)}</div></section>;
+  if(page==='booking') return <section className="page"><button className="back" onClick={()=>setPage('doctors')}>← Back to doctors</button><div className="booking-layout"><div><span className="eyebrow">BOOK APPOINTMENT</span><h1>{selectedDoctor?.name||'Choose a doctor'}</h1><p>{selectedDoctor?.specialty} · {selectedDoctor?.hospital}</p><div className="steps"><span>1 Doctor</span><span className="active">2 Date & time</span><span>3 Confirm</span></div><div className="section-card"><h3>Select date</h3><div className="date-grid">{dates.map(d=><button key={d} onClick={()=>setSelectedDate(d)} className={selectedDate===d?'selected':''}><b>{new Date(d+'T12:00:00').toLocaleDateString('en',{weekday:'short'})}</b><strong>{d.slice(-2)}</strong><small>{new Date(d+'T12:00:00').toLocaleDateString('en',{month:'short'})}</small></button>)}</div><h3>Available times</h3><div className="slot-grid">{(selectedDoctor?.slots||[]).map(t=><button key={t} className={selectedTime===t?'selected':''} onClick={()=>setSelectedTime(t)}>{t}</button>)}</div></div></div><aside className="summary"><span className="eyebrow">BOOKING SUMMARY</span><h3>{selectedDoctor?.name}</h3><p>{selectedDate} · {selectedTime||'Choose time'}</p><p>Consultation fee <b>₹{selectedDoctor?.fee||0}</b></p><button className="primary full" onClick={book}>Confirm appointment</button></aside></div></section>;
+  if(page==='appointments') return <section className="page"><div className="page-title"><div><span className="eyebrow">YOUR CARE TIMELINE</span><h1>My appointments</h1></div><select value={filter} onChange={e=>setFilter(e.target.value)}>{['All','Pending','Confirmed','Upcoming','Completed','Cancelled','Missed'].map(x=><option key={x}>{x}</option>)}</select></div><div className="appointment-list">{userAppointments.filter(a=>filter==='All'||a.status===filter).map(a=><AppointmentCard key={a.id} a={a} doctor={false}/>)}</div></section>;
+  if(page==='prescriptions') return <section className="page"><div className="page-title"><div><span className="eyebrow">DAY 6 FEATURE</span><h1>My prescriptions</h1><p>View prescriptions from completed appointments and download a PDF copy.</p></div></div><div className="prescription-grid">{state.prescriptions.map(p=><article className="prescription-card" key={p.id}><div className="rx">Rx</div><span>{p.createdAt}</span><h3>{p.diagnosis}</h3><p>{p.doctor}</p><ul>{p.medicines.map((m,i)=><li key={i}><b>{m.name}</b><small>{m.dosage} · {m.duration}</small></li>)}</ul><div className="card-actions"><button onClick={()=>downloadPdf(p)}>⇩ Download PDF</button><button onClick={()=>alert(p.instructions)}>View details</button></div></article>)}</div></section>;
+  if(page==='profile') return <ProfilePage/>;
+  if(page==='notifications') return <section className="page"><div className="page-title"><div><span className="eyebrow">STAY UPDATED</span><h1>Notifications</h1></div><button onClick={()=>setState(s=>({...s,notifications:s.notifications.map(n=>({...n,read:true}))}))}>Mark all read</button></div><div className="notification-list">{state.notifications.map(n=><article className={n.read?'notification read':'notification'} key={n.id}><div className="notice-icon">◌</div><div><h3>{n.title}</h3><p>{n.body}</p><small>{n.createdAt}</small></div></article>)}</div></section>;
+  return null;
+ }
+ function DoctorPages(){
+  const all=state.appointments;
+  if(page==='doctor-dashboard') return <section className="page"><div className="page-title"><div><span className="eyebrow">DOCTOR WORKSPACE</span><h1>Good morning, Doctor.</h1><p>Here is a focused view of your upcoming care schedule.</p></div><button className="primary" onClick={()=>nav('doctor-appointments')}>View all appointments</button></div><div className="stats"><Stat label="Upcoming" value={all.filter(a=>['Pending','Confirmed','Upcoming'].includes(a.status)).length}/><Stat label="Completed" value={all.filter(a=>a.status==='Completed').length}/><Stat label="Available slots" value={state.availability.length}/><Stat label="Patient satisfaction" value="4.9/5"/></div><div className="two-col"><section className="panel"><div className="panel-head"><h2>Upcoming appointments</h2><button onClick={()=>nav('doctor-calendar')}>Calendar</button></div>{all.filter(a=>['Pending','Confirmed','Upcoming'].includes(a.status)).slice(0,4).map(a=><AppointmentCard key={a.id} a={a} doctor/> )}</section><section className="panel"><div className="panel-head"><h2>Quick actions</h2></div><button className="quick" onClick={()=>nav('doctor-profile')}>♙ Update profile & availability</button><button className="quick" onClick={()=>nav('doctor-prescriptions')}>▣ Manage prescriptions</button><button className="quick" onClick={addAvailability}>＋ Add an available slot</button></section></div></section>;
+  if(page==='doctor-calendar') return <section className="page"><div className="page-title"><div><span className="eyebrow">DAY / WEEK / MONTH</span><h1>Appointment calendar</h1></div><button className="primary" onClick={addAvailability}>＋ Add availability</button></div><div className="calendar"><div className="calendar-head">{dates.map(d=><b key={d}>{new Date(d+'T12:00:00').toLocaleDateString('en',{weekday:'short',day:'numeric'})}</b>)}</div><div className="calendar-body">{dates.map(d=><div className="day-col" key={d}>{state.availability.filter(x=>x.startsWith(d)).map((x,i)=><button className="availability" key={i}>{x.split(' ')[1]} {x.split(' ')[2]}</button>)}{all.filter(a=>a.date===d).map(a=><button className={`cal-appt ${statusClass[a.status]}`} key={a.id} onClick={()=>changeStatus(a.id,a.status==='Pending'?'Confirmed':a.status)}><b>{a.time}</b><span>{a.patient}</span><small>{a.status}</small></button>)}</div>)}</div></div><p className="muted">Demo interaction: click a pending calendar appointment to confirm it. Completed, cancelled and missed items remain status-controlled.</p></section>;
+  if(page==='doctor-appointments') return <section className="page"><div className="page-title"><div><span className="eyebrow">MANAGE PATIENT CARE</span><h1>All appointments</h1></div><select value={filter} onChange={e=>setFilter(e.target.value)}>{['All','Pending','Confirmed','Upcoming','Completed','Cancelled','Missed'].map(x=><option key={x}>{x}</option>)}</select></div><div className="appointment-list">{all.filter(a=>filter==='All'||a.status===filter).map(a=><AppointmentCard key={a.id} a={a} doctor/>)}</div></section>;
+  if(page==='doctor-prescriptions') return <section className="page"><div className="page-title"><div><span className="eyebrow">PRESCRIPTION MANAGEMENT</span><h1>Create & manage prescriptions</h1></div></div><div className="two-col"><section className="panel"><h2>Completed appointments</h2>{all.filter(a=>a.status==='Completed').map(a=><div className="row-item" key={a.id}><div><b>{a.patient}</b><small>{a.date} · {a.type}</small></div><button onClick={()=>createPrescription(a)}>{a.prescriptionId?'View prescription':'Create prescription'}</button></div>)}</section><section className="panel"><h2>Existing prescriptions</h2>{state.prescriptions.map(p=><div className="row-item" key={p.id}><div><b>{p.patient}</b><small>{p.diagnosis}</small></div><button onClick={()=>downloadPdf(p)}>PDF</button></div>)}</section></div></section>;
+  if(page==='doctor-profile') return <section className="page"><div className="page-title"><div><span className="eyebrow">DOCTOR PROFILE</span><h1>Profile & availability</h1><p>Manage professional information and reusable appointment slots.</p></div><button className="primary" onClick={addAvailability}>＋ Add slot</button></div><div className="two-col"><section className="panel"><h2>Professional profile</h2><div className="form-grid"><label>Display name<input defaultValue="Dr. Arjun Rao"/></label><label>Specialty<input defaultValue="Cardiology"/></label><label>Experience<input defaultValue="12 years"/></label><label>Hospital<input defaultValue="Metro Heart Institute"/></label></div><button className="primary" onClick={()=>notify('Profile saved','Doctor profile information was updated.')}>Save profile</button></section><section className="panel"><h2>Recurring availability</h2><p className="muted">Current reusable slots are visible to patients during booking.</p>{state.availability.map((x,i)=><div className="slot-row" key={i}><span>{x}</span><button onClick={()=>setState(s=>({...s,availability:s.availability.filter((_,idx)=>idx!==i)}))}>Remove</button></div>)}</section></div></section>;
+  return null;
+ }
+ function AppointmentCard({a,doctor}:{a:Appointment;doctor:boolean}){const prescription=state.prescriptions.find(p=>p.appointmentId===a.id);return <article className="appointment-card"><div className="appt-date"><b>{a.date.slice(-2)}</b><span>{new Date(a.date+'T12:00:00').toLocaleDateString('en',{month:'short'})}</span></div><div className="appt-main"><div className="card-row"><h3>{doctor?a.patient:a.doctor}</h3><span className={`status ${statusClass[a.status]}`}>{a.status}</span></div><p>{a.type} · {a.time} {a.notes&&`· ${a.notes}`}</p><small>{doctor?'👤 Patient details available':'🩺 Doctor appointment'}</small></div><div className="appt-actions">{doctor&&a.status==='Pending'&&<><button onClick={()=>changeStatus(a.id,'Confirmed')}>Confirm</button><button onClick={()=>changeStatus(a.id,'Cancelled')}>Decline</button></>}{doctor&&['Confirmed','Upcoming'].includes(a.status)&&<><button onClick={()=>changeStatus(a.id,'Completed')}>Complete</button><button onClick={()=>changeStatus(a.id,'Cancelled')}>Cancel</button></>}{doctor&&a.status==='Completed'&&<button onClick={()=>createPrescription(a)}>{prescription?'Prescription':'Create Rx'}</button>}{!doctor&&a.status==='Completed'&&<>{prescription?<button onClick={()=>downloadPdf(prescription)}>Download PDF</button>:<span className="muted">Prescription not available</span>}<button onClick={()=>{setSelectedDoctor(state.doctors.find(d=>d.id===a.doctorId)||null);setPage('booking')}}>Rebook</button></>}</div></article>}
+ function ProfilePage(){const [draft,setDraft]=useState(state.profile);return <section className="page"><div className="page-title"><div><span className="eyebrow">YOUR HEALTH PROFILE</span><h1>Personal & care information</h1></div><button className="primary" onClick={()=>{setState(s=>({...s,profile:draft}));notify('Profile updated','Your information was saved.')}}>Save changes</button></div><div className="stats"><Stat label="Total prescriptions" value={state.prescriptions.length}/><Stat label="Completed appointments" value={userAppointments.filter(a=>a.status==='Completed').length}/><Stat label="Test reports" value="0"/><Stat label="Profile completion" value="92%"/></div><div className="form-grid profile-form">{Object.entries(draft).map(([key,val])=><label key={key}>{key.replace(/([A-Z])/g,' $1')}<input value={val} onChange={e=>setDraft({...draft,[key]:e.target.value})}/></label>)}</div></section>}
 }
-
-function DoctorCard({d,onBook}:{d:any,onBook:()=>void}){return <article className="doctor-card"><div className="avatar large">{d.name.split(" ").filter(Boolean).slice(-1)[0]?.[0]}</div><div className="rating">★ {d.rating}</div><span className="eyebrow">{d.specialty}</span><h2>{d.name}</h2><p>{d.bio}</p><div className="doctor-meta"><span>{d.experience}</span><span>{d.location}</span><span>₹{d.fee}</span></div><button className="btn primary wide" onClick={onBook}>View slots & book</button></article>}
-function PageTitle({title,subtitle}:{title:string,subtitle:string}){return <div className="page-head"><span className="eyebrow">Schedula healthcare</span><h1>{title}</h1><p>{subtitle}</p></div>}
-function Stat({label,value}:{label:string,value:any}){return <div className="stat"><span>{label}</span><b>{value}</b></div>}
-function Empty({text}:{text:string}){return <div className="empty"><div>⌁</div><b>{text}</b><p>Try another filter or create new availability to continue.</p></div>}
-function AppointmentCard({a,actions}:{a:any,actions?:any}){return <article className="appointment-card"><div className="appointment-main"><div className="avatar">{(a.patient||a.doctor||"S")[0]}</div><div><span className="eyebrow">{a.type}</span><h3>{a.doctor}</h3><p>{a.specialty} · Patient: {a.patient}</p><b>{a.date} · {a.time}</b></div></div><span className={`status ${a.status.toLowerCase()}`}>{a.status}</span>{actions}</article>}
-function ProfileForm({values,onSave}:{values:any,onSave:(x:any)=>void}){const [form,setForm]=useState(values);useEffect(()=>setForm(values),[values]);return <form className="card profile-form" onSubmit={e=>{e.preventDefault();onSave(form)}}>{Object.entries(form).map(([k,v])=><label key={k}><span>{k.replace(/([A-Z])/g," $1").replace(/^./,x=>x.toUpperCase())}</span><input value={String(v)} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}<button className="btn primary">Save changes</button></form>}
-function AuthCard({title,subtitle,button,onDone,extra,extraAction,register}:{title:string,subtitle:string,button:string,onDone:()=>void,extra:string,extraAction:()=>void,register?:boolean}){const [email,setEmail]=useState("");const [password,setPassword]=useState("");const [name,setName]=useState("");const [error,setError]=useState("");function submit(e:any){e.preventDefault();if((register&&!name.trim())||!email.includes("@")||password.length<6)return setError("Enter valid details. Password must contain at least 6 characters.");onDone()}return <div className="auth-wrap"><form className="auth-card" onSubmit={submit}><span className="pill">Professional portal</span><h1>{title}</h1><p>{subtitle}</p>{register&&<input placeholder="Full professional name" value={name} onChange={e=>setName(e.target.value)}/>}<input placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)}/><input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>{error&&<div className="error">{error}</div>}<button className="btn primary wide">{button}</button><p>{extra} <button type="button" className="text-btn" onClick={extraAction}>{register?"Login":"Register"}</button></p></form></div>}
+function Landing({login}:{login:(r:Role)=>void}){const [mode,setMode]=useState<'user'|'doctor'>('user');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [error,setError]=useState('');const submit=(e:React.FormEvent)=>{e.preventDefault();if(!email.includes('@')||password.length<4){setError('Enter a valid email and a password of at least 4 characters.');return;}login(mode)};return <div className="landing"><section className="landing-left"><div className="brand"><span>✚</span><b>Schedula</b></div><div className="landing-copy"><span className="eyebrow light">SMART HEALTHCARE PLATFORM</span><h1>Better care starts with better scheduling.</h1><p>One polished workspace for patients and doctors — appointments, availability, prescriptions, notifications and intelligent care guidance.</p><div className="feature-points"><span>✓ Book in minutes</span><span>✓ Manage complete care</span><span>✓ Secure demo persistence</span></div></div><div className="mini-card">This final build combines all Day 1–6 requirements into one responsive experience.</div></section><section className="login-pane"><div className="login-card"><div className="mode-switch"><button className={mode==='user'?'selected':''} onClick={()=>setMode('user')}>Patient</button><button className={mode==='doctor'?'selected':''} onClick={()=>setMode('doctor')}>Doctor</button></div><span className="eyebrow">WELCOME BACK</span><h2>{mode==='user'?'Your care, organized.':'Your clinic, in control.'}</h2><p>Use any valid email and a password of 4+ characters. Demo credentials are shown below.</p>{error&&<div className="error">{error}</div>}<form onSubmit={submit}><label>Email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={mode==='user'?'patient@schedula.demo':'doctor@schedula.demo'}/></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="demo123"/></label><button className="primary full" type="submit">Continue to {mode==='user'?'Patient':'Doctor'} Portal →</button></form><div className="demo-creds">Demo: <b>{mode==='user'?'patient@schedula.demo':'doctor@schedula.demo'}</b> · <b>demo123</b></div></div></section></div>}
+function Stat({label,value}:{label:string;value:string|number}){return <article className="stat"><span>{label}</span><b>{value}</b><small>Updated now</small></article>}

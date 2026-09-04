@@ -1,2 +1,2 @@
-import { SchedulaApp } from "@/components/SchedulaApp";
-export default function Page(){ return <SchedulaApp initialMode="user" initialView="home" />; }
+import SchedulaApp from '../components/SchedulaApp';
+export default function Home() { return <SchedulaApp />; }
